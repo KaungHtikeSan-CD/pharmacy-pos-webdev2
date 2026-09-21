@@ -30,7 +30,31 @@ The project will be built with Next.js, MongoDB, and REST API routes. It will in
 
 ## Project Status
 
-Initial repository setup. Implementation will be completed step by step by the team.
+Initial Next.js project setup. Implementation will be completed step by step by the team.
+
+## Local Setup
+
+1. Clone the repository.
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create `.env.local` from `.env.example` and update the MongoDB connection if needed.
+4. Run the development server:
+
+```bash
+npm run dev
+```
+
+5. Open `http://localhost:3000`.
+
+## Work Plan
+
+- Kaung Htike San: project setup and Product/Stock module
+- Oak Soe Khant: Order Management module
+- Phyo Min Khaing: POS Sale, Purchase History, and Dashboard data
 
 ## Screenshots
 
