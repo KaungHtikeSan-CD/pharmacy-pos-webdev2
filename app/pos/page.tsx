@@ -4,7 +4,8 @@ export default function PosPage() {
       <div className="page-title">
         <p className="eyebrow">POS Sale</p>
         <h2>POS sale placeholder</h2>
-        <p>Phyo Min Khaing will implement cart, checkout, and sale records.</p>
+        <p>Assigned to: Phyo Min Khaing</p>
+        <p>Planning setup only. Cart, checkout, and sale records will follow.</p>
       </div>
     </section>
   );
