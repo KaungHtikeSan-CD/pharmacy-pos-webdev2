@@ -1,7 +1,7 @@
 export type SaleUnit = "box" | "card";
 
 export interface SoldItem {
-  productCode: string;
+  productCode?: string;
   barcode?: string;
   medicineName: string;
   quantity: number;
