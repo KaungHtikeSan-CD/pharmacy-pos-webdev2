@@ -148,6 +148,22 @@ a {
   padding-left: 20px;
 }
 
+.field-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.field-list span {
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--primary-dark);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
 @media (max-width: 760px) {
   .app-header {
     align-items: flex-start;

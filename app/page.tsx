@@ -1,5 +1,5 @@
 const summaryCards = [
-  { label: "Stock Items", value: "0", helper: "Product module starts next" },
+  { label: "Stock Items", value: "0", helper: "Product foundation added" },
   { label: "Orders", value: "0", helper: "Assigned to Oak" },
   { label: "Sales", value: "0", helper: "Assigned to Phyo" },
 ];
