@@ -1,41 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { type Sale, type SoldItem } from "@/types/sale";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isText(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-function isAmount(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
-}
-
-function isSoldItem(value: unknown): value is SoldItem {
-  return (
-    isRecord(value) &&
-    (isText(value.productCode) || isText(value.barcode)) &&
-    (value.productCode === undefined || isText(value.productCode)) &&
-    (value.barcode === undefined || isText(value.barcode)) &&
-    isText(value.medicineName) &&
-    typeof value.quantity === "number" &&
-    Number.isSafeInteger(value.quantity) &&
-    value.quantity > 0 &&
-    (value.unit === "box" || value.unit === "card") &&
-    isAmount(value.salePrice) &&
-    isAmount(value.discount) &&
-    isAmount(value.totalAmount)
-  );
-}
+import { type Sale } from "@/types/sale";
+import { isRecord, isText, isAmount, isSoldItem, normalizeSoldItems } from "@/lib/sales";
 
 export async function GET() {
   try {
     const { getDb } = await import("@/lib/mongodb");
     const db = await getDb();
-    const sales = await db.collection<Sale>("sales").find({}).sort({ createdAt: -1 }).toArray();
+    const sales = await db.collection<Sale>("sales").find({}).sort({ createdAt: -1, _id: -1 }).toArray();
 
     return NextResponse.json({ sales });
   } catch {
@@ -72,16 +44,7 @@ export async function POST(request: Request) {
   const now = new Date();
   const sale: Sale = {
     saleId: body.saleId.trim(),
-    soldItems: body.soldItems.map((item: SoldItem) => ({
-      ...(item.productCode !== undefined ? { productCode: item.productCode.trim() } : {}),
-      ...(item.barcode !== undefined ? { barcode: item.barcode.trim() } : {}),
-      medicineName: item.medicineName.trim(),
-      quantity: item.quantity,
-      unit: item.unit,
-      salePrice: item.salePrice,
-      discount: item.discount,
-      totalAmount: item.totalAmount,
-    })),
+    soldItems: normalizeSoldItems(body.soldItems),
     totalAmount: body.totalAmount,
     createdAt: now,
     updatedAt: now,
