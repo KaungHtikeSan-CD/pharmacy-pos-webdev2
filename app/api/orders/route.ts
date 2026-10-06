@@ -5,7 +5,8 @@ import { type Order, type OrderStatus } from "@/types/order";
 
 export async function GET() {
   try {
-    const orders = await getDb()
+    const db = await getDb();
+    const orders = await db
       .collection<Order>("orders")
       .find({})
       .sort({ createdAt: -1 })
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     "wholesaleShop",
     "status",
   ] as const;
-  const missingFields = requiredStringFields.filter(
+  const missingFields: string[] = requiredStringFields.filter(
     (field) => typeof body[field] !== "string" || body[field].trim() === "",
   );
 
@@ -97,7 +98,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await getDb().collection<Order>("orders").insertOne(order);
+    const db = await getDb();
+    const result = await db.collection<Order>("orders").insertOne(order);
 
     return NextResponse.json({ ...order, _id: result.insertedId }, { status: 201 });
   } catch {
