@@ -91,10 +91,22 @@ npm run dev
 
 ## Screenshots
 
-Add final screenshots before submission:
+### Dashboard
 
-- Dashboard page
-- Stock management page
-- Order management page
-- POS checkout page
-- Purchase history page
+![Dashboard](public/screenshots/dashboard.png)
+
+### Stock Management
+
+![Stock Management](public/screenshots/stock.png)
+
+### Order Management
+
+![Order Management](public/screenshots/orders.png)
+
+### POS Checkout
+
+![POS Checkout](public/screenshots/pos.png)
+
+### Purchase History
+
+![Purchase History](public/screenshots/purchase-history.png)

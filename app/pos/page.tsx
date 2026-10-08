@@ -135,15 +135,21 @@ export default function PosPage() {
       <div className="page-title">
         <p className="eyebrow">POS Sale</p>
         <h2>Customer checkout</h2>
-        <p>Search by product code or barcode, add items to cart, and save completed sales.</p>
+        <p>Scan with a barcode scanner or type a product code/barcode to add items and complete checkout.</p>
       </div>
 
       <section className="work-panel">
-        <h3>Add item</h3>
+        <h3>Scan or type item</h3>
         <form className="inline-form" onSubmit={addProduct}>
-          <input placeholder="Type product code or barcode" value={lookup} onChange={(event) => setLookup(event.target.value)} />
-          <button type="submit">Add to cart</button>
+          <input
+            autoFocus
+            placeholder="Scan barcode or type product code"
+            value={lookup}
+            onChange={(event) => setLookup(event.target.value)}
+          />
+          <button type="submit">Scan / Add</button>
         </form>
+        <p className="helper-text">USB barcode scanners work like a keyboard. Keep this field selected, then scan the product barcode.</p>
         {message ? <p className="status-text">{message}</p> : null}
       </section>
 

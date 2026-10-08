@@ -233,6 +233,13 @@ button.secondary {
   margin: 16px 0 0;
 }
 
+.helper-text {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 10px 0 0;
+}
+
 .search-input {
   max-width: 320px;
 }
