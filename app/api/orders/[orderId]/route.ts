@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getDb } from "@/lib/mongodb";
 import { type Order, type OrderStatus } from "@/types/order";
+import { type Product } from "@/types/product";
 
 type RouteContext = {
   params: Promise<{ orderId: string }>;
@@ -141,12 +142,31 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   try {
     const db = await getDb();
+    const existingOrder = await db.collection<Order>("orders").findOne({ orderId });
+
+    if (!existingOrder) {
+      return NextResponse.json({ message: "Order not found." }, { status: 404 });
+    }
+
+    const shouldAddToStock =
+      existingOrder.status !== "Arrived" && update.status === "Arrived";
+
     const result = await db
       .collection<Order>("orders")
       .updateOne({ orderId }, { $set: update });
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ message: "Order not found." }, { status: 404 });
+    }
+
+    if (shouldAddToStock) {
+      await db.collection<Product>("products").updateOne(
+        { productCode: existingOrder.productCode },
+        {
+          $inc: { quantity: existingOrder.quantity },
+          $set: { updatedAt: new Date() },
+        },
+      );
     }
 
     const order = await db.collection<Order>("orders").findOne({ orderId });

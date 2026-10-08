@@ -54,6 +54,19 @@ export async function POST(request: Request) {
     const { getDb } = await import("@/lib/mongodb");
     const db = await getDb();
     const result = await db.collection<Sale>("sales").insertOne(sale);
+    await Promise.all(
+      sale.soldItems.map((item) => {
+        if (!item.productCode) return Promise.resolve();
+
+        return db.collection("products").updateOne(
+          { productCode: item.productCode },
+          {
+            $inc: { quantity: -item.quantity },
+            $set: { updatedAt: now },
+          },
+        );
+      }),
+    );
 
     return NextResponse.json({ sale: { ...sale, _id: result.insertedId } }, { status: 201 });
   } catch {
