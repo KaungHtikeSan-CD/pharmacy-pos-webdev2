@@ -14,6 +14,10 @@ Pharmacy POS System is a web application for small and mid-range pharmacy operat
 
 The project is built with Next.js, MongoDB, and REST API routes. It includes CRUD operations for three main data models: Product/Stock, Order, and Sale/Purchase.
 
+## Production URL
+
+http://172.198.162.60
+
 ## Planned Technology Stack
 
 - Next.js
