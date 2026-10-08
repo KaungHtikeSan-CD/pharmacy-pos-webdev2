@@ -76,6 +76,9 @@ export default function OrdersPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
+    const originalOrder = editingId
+      ? orders.find((order) => order.orderId === editingId)
+      : null;
 
     const now = new Date().toISOString();
     const orderPayload = {
@@ -115,7 +118,13 @@ export default function OrdersPage() {
         return;
       }
 
-      setMessage(editingId ? "Order updated." : "Order added.");
+      if (editingId && originalOrder?.status === "Arrived") {
+        setMessage("Order updated. Stock was recalculated for the arrived order.");
+      } else if (editingId && form.status === "Arrived") {
+        setMessage(`Order updated as arrived. Stock increased by ${form.quantity} for ${form.medicineName}.`);
+      } else {
+        setMessage(editingId ? "Order updated." : "Order added.");
+      }
       resetForm();
       await loadOrders();
     } catch {
@@ -125,6 +134,7 @@ export default function OrdersPage() {
 
   async function updateStatus(orderId: string, status: OrderStatus) {
     setMessage("");
+    const order = orders.find((order) => order.orderId === orderId);
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",
@@ -138,7 +148,11 @@ export default function OrdersPage() {
         return;
       }
 
-      setMessage(status === "Arrived" ? "Order marked as arrived." : "Order status updated.");
+      setMessage(
+        status === "Arrived" && order
+          ? `Order marked as arrived. Stock increased by ${order.quantity} for ${order.medicineName}.`
+          : "Order status updated.",
+      );
       await loadOrders();
     } catch {
       setMessage("Unable to update order status.");
@@ -146,6 +160,7 @@ export default function OrdersPage() {
   }
 
   async function deleteOrder(orderId: string) {
+    const order = orders.find((order) => order.orderId === orderId);
     const confirmed = window.confirm("Delete this order?");
     if (!confirmed) return;
 
@@ -158,7 +173,11 @@ export default function OrdersPage() {
         return;
       }
 
-      setMessage("Order deleted.");
+      setMessage(
+        order?.status === "Arrived"
+          ? `Order deleted. Stock was reduced by ${order.quantity} for ${order.medicineName}.`
+          : "Order deleted.",
+      );
       await loadOrders();
     } catch {
       setMessage("Unable to delete order.");

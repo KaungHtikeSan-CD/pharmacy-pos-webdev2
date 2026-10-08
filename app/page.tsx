@@ -38,6 +38,18 @@ export default function DashboardPage() {
     }
 
     loadDashboard();
+
+    function refreshOnFocus() {
+      loadDashboard();
+    }
+
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+
+    return () => {
+      window.removeEventListener("focus", refreshOnFocus);
+      document.removeEventListener("visibilitychange", refreshOnFocus);
+    };
   }, []);
 
   const totalSales = useMemo(
