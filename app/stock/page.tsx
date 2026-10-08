@@ -21,6 +21,10 @@ const emptyForm = {
   lowStockThreshold: 5,
 };
 
+function calculateSalePrice(wholesalePrice: number, profitPercentage: number) {
+  return Math.round(wholesalePrice + (wholesalePrice * profitPercentage) / 100);
+}
+
 export default function StockPage() {
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [form, setForm] = useState(emptyForm);
@@ -72,10 +76,21 @@ export default function StockPage() {
       "salePrice",
       "lowStockThreshold",
     ];
-    setForm((current) => ({
-      ...current,
-      [field]: numberFields.includes(field) ? Number(value) : value,
-    }));
+    setForm((current) => {
+      const nextForm = {
+        ...current,
+        [field]: numberFields.includes(field) ? Number(value) : value,
+      };
+
+      if (field === "wholesalePrice" || field === "profitPercentage") {
+        nextForm.salePrice = calculateSalePrice(
+          Number(nextForm.wholesalePrice),
+          Number(nextForm.profitPercentage),
+        );
+      }
+
+      return nextForm;
+    });
   }
 
   function startEdit(product: ProductRecord) {
@@ -114,7 +129,7 @@ export default function StockPage() {
       cardsPerBox: form.cardsPerBox,
       wholesalePrice: form.wholesalePrice,
       profitPercentage: form.profitPercentage,
-      salePrice: form.salePrice,
+      salePrice: calculateSalePrice(form.wholesalePrice, form.profitPercentage),
       wholesaleShop: form.wholesaleShop,
       lowStockThreshold: form.lowStockThreshold,
       ...(form.barcode.trim() ? { barcode: form.barcode.trim() } : {}),
@@ -216,8 +231,8 @@ export default function StockPage() {
             <input type="number" min="0" value={form.profitPercentage} onChange={(event) => updateField("profitPercentage", event.target.value)} required />
           </label>
           <label>
-            Sale Price
-            <input type="number" min="0" value={form.salePrice} onChange={(event) => updateField("salePrice", event.target.value)} required />
+            Sale Price (Auto)
+            <input type="number" min="0" value={form.salePrice} readOnly />
           </label>
           <label>
             Wholesale Shop

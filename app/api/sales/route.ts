@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { type Sale } from "@/types/sale";
+import { type Product } from "@/types/product";
 import { isRecord, isText, isAmount, isSoldItem, normalizeSoldItems } from "@/lib/sales";
 
 export async function GET() {
@@ -53,6 +54,38 @@ export async function POST(request: Request) {
   try {
     const { getDb } = await import("@/lib/mongodb");
     const db = await getDb();
+    const requestedQuantities = new Map<string, number>();
+
+    for (const item of sale.soldItems) {
+      if (!item.productCode) continue;
+      requestedQuantities.set(
+        item.productCode,
+        (requestedQuantities.get(item.productCode) ?? 0) + item.quantity,
+      );
+    }
+
+    const products = await db
+      .collection<Product>("products")
+      .find({ productCode: { $in: [...requestedQuantities.keys()] } })
+      .toArray();
+    const productsByCode = new Map(products.map((product) => [product.productCode, product]));
+    const insufficientItem = [...requestedQuantities.entries()].find(([productCode, quantity]) => {
+      const product = productsByCode.get(productCode);
+      return !product || product.quantity < quantity;
+    });
+
+    if (insufficientItem) {
+      const [productCode, quantity] = insufficientItem;
+      const product = productsByCode.get(productCode);
+
+      return NextResponse.json(
+        {
+          message: `${product?.medicineName ?? productCode} has only ${product?.quantity ?? 0} item(s) in stock. Requested ${quantity}.`,
+        },
+        { status: 409 },
+      );
+    }
+
     const result = await db.collection<Sale>("sales").insertOne(sale);
     await Promise.all(
       sale.soldItems.map((item) => {

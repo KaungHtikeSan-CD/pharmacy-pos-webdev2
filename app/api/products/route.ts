@@ -19,6 +19,10 @@ function isNonNegativeNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
+function calculateSalePrice(wholesalePrice: number, profitPercentage: number) {
+  return Math.round(wholesalePrice + (wholesalePrice * profitPercentage) / 100);
+}
+
 function getMissingFields(body: Record<string, unknown>) {
   const missingFields: string[] = [];
 
@@ -38,7 +42,6 @@ function getMissingFields(body: Record<string, unknown>) {
     "quantity",
     "cardsPerBox",
     "wholesalePrice",
-    "salePrice",
   ] as const;
 
   missingFields.push(
@@ -122,7 +125,10 @@ export async function POST(request: Request) {
     cardsPerBox: body.cardsPerBox as number,
     wholesalePrice: body.wholesalePrice as number,
     profitPercentage: body.profitPercentage as number,
-    salePrice: body.salePrice as number,
+    salePrice: calculateSalePrice(
+      body.wholesalePrice as number,
+      body.profitPercentage as number,
+    ),
     wholesaleShop: (body.wholesaleShop as string).trim(),
     lowStockThreshold: body.lowStockThreshold as number,
     createdAt: now,

@@ -18,10 +18,9 @@ const numberFields = [
   "cardsPerBox",
   "wholesalePrice",
   "profitPercentage",
-  "salePrice",
   "lowStockThreshold",
 ] as const;
-const editableFields = [...textFields, ...numberFields, "barcode"] as const;
+const editableFields = [...textFields, ...numberFields, "barcode", "salePrice"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -33,6 +32,10 @@ function isText(value: unknown): value is string {
 
 function isNonNegativeNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function calculateSalePrice(wholesalePrice: number, profitPercentage: number) {
+  return Math.round(wholesalePrice + (wholesalePrice * profitPercentage) / 100);
 }
 
 async function getProductId(context: RouteContext) {
@@ -109,6 +112,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     ...numberFields.filter(
       (field) => body[field] !== undefined && !isNonNegativeNumber(body[field]),
     ),
+    ...(body.salePrice !== undefined && !isNonNegativeNumber(body.salePrice) ? ["salePrice"] : []),
     ...(body.barcode !== undefined && !isText(body.barcode) ? ["barcode"] : []),
   ];
 
@@ -131,6 +135,17 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   try {
     const db = await getDb();
+    const existingProduct = await db.collection<Product>("products").findOne({ productId });
+
+    if (!existingProduct) {
+      return NextResponse.json({ message: "Product not found." }, { status: 404 });
+    }
+
+    update.salePrice = calculateSalePrice(
+      typeof update.wholesalePrice === "number" ? update.wholesalePrice : existingProduct.wholesalePrice,
+      typeof update.profitPercentage === "number" ? update.profitPercentage : existingProduct.profitPercentage,
+    );
+
     const result = await db
       .collection<Product>("products")
       .updateOne({ productId }, { $set: update });

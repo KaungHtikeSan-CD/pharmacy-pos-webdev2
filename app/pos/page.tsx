@@ -32,6 +32,11 @@ export default function PosPage() {
     [cart],
   );
 
+  function getAvailableStock(productCode?: string) {
+    if (!productCode) return 0;
+    return products.find((product) => product.productCode === productCode)?.quantity ?? 0;
+  }
+
   function addProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
@@ -44,6 +49,12 @@ export default function PosPage() {
 
     if (!product) {
       setMessage("Product code or barcode not found.");
+      return;
+    }
+
+    const currentQuantity = cart.find((item) => item.productCode === product.productCode)?.quantity ?? 0;
+    if (product.quantity <= currentQuantity) {
+      setMessage(`${product.medicineName} has only ${product.quantity} item(s) in stock.`);
       return;
     }
 
@@ -78,10 +89,23 @@ export default function PosPage() {
   }
 
   function updateCart(index: number, field: "quantity" | "discount" | "unit", value: string) {
+    const item = cart[index];
+    const availableStock = getAvailableStock(item?.productCode);
+    const requestedQuantity = Math.max(1, Number(value));
+
+    if (field === "quantity" && requestedQuantity > availableStock) {
+      setMessage(`${item.medicineName} has only ${availableStock} item(s) in stock.`);
+    } else {
+      setMessage("");
+    }
+
     setCart((current) =>
       current.map((item, itemIndex) => {
         if (itemIndex !== index) return item;
-        const quantity = field === "quantity" ? Math.max(1, Number(value)) : item.quantity;
+        const quantity =
+          field === "quantity"
+            ? Math.min(requestedQuantity, getAvailableStock(item.productCode))
+            : item.quantity;
         const discount = field === "discount" ? Math.max(0, Number(value)) : item.discount;
         const unit = field === "unit" ? (value as "box" | "card") : item.unit;
         return {
@@ -106,6 +130,12 @@ export default function PosPage() {
       return;
     }
 
+    const overStockItem = cart.find((item) => item.quantity > getAvailableStock(item.productCode));
+    if (overStockItem) {
+      setMessage(`${overStockItem.medicineName} has only ${getAvailableStock(overStockItem.productCode)} item(s) in stock.`);
+      return;
+    }
+
     try {
       const response = await fetch("/api/sales", {
         method: "POST",
@@ -124,6 +154,7 @@ export default function PosPage() {
       }
 
       setCart([]);
+      await loadProducts();
       setMessage("Checkout complete. Sale saved to purchase history.");
     } catch {
       setMessage("Unable to complete checkout.");
@@ -163,6 +194,7 @@ export default function PosPage() {
             <thead>
               <tr>
                 <th>Medicine</th>
+                <th>Stock</th>
                 <th>Unit</th>
                 <th>Qty</th>
                 <th>Price</th>
@@ -173,11 +205,12 @@ export default function PosPage() {
             </thead>
             <tbody>
               {cart.length === 0 ? (
-                <tr><td colSpan={7}>No checkout items.</td></tr>
+                <tr><td colSpan={8}>No checkout items.</td></tr>
               ) : (
                 cart.map((item, index) => (
                   <tr key={`${item.productCode}-${index}`}>
                     <td>{item.medicineName}</td>
+                    <td>{getAvailableStock(item.productCode)}</td>
                     <td>
                       <select value={item.unit} onChange={(event) => updateCart(index, "unit", event.target.value)}>
                         <option value="box">box</option>
