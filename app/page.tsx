@@ -47,6 +47,9 @@ export default function DashboardPage() {
   const lowStockCount = products.filter(
     (product) => product.quantity <= product.lowStockThreshold,
   ).length;
+  const lowStockProducts = products
+    .filter((product) => product.quantity <= product.lowStockThreshold)
+    .sort((a, b) => a.quantity - b.quantity);
   const arrivedOrders = orders.filter((order) => order.status === "Arrived").length;
   const topProducts = useMemo(() => {
     const totals = new Map<string, { name: string; quantity: number; total: number }>();
@@ -86,6 +89,38 @@ export default function DashboardPage() {
           </article>
         ))}
       </div>
+
+      <section className="work-panel">
+        <h3>Low stock alerts</h3>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Medicine</th>
+                <th>Product Code</th>
+                <th>Current Quantity</th>
+                <th>Low Stock Threshold</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lowStockProducts.length === 0 ? (
+                <tr><td colSpan={5}>No low stock items.</td></tr>
+              ) : (
+                lowStockProducts.map((product) => (
+                  <tr key={product.productId}>
+                    <td>{product.medicineName}</td>
+                    <td>{product.productCode}</td>
+                    <td>{product.quantity}</td>
+                    <td>{product.lowStockThreshold}</td>
+                    <td><span className="badge danger">Low stock</span></td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="work-panel">
         <h3>Top selling products</h3>
