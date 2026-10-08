@@ -60,6 +60,12 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     const { getDb } = await import("@/lib/mongodb");
     const db = await getDb();
+    const existingSale = await db.collection<Sale>("sales").findOne({ saleId });
+
+    if (!existingSale) {
+      return NextResponse.json({ message: "Sale not found." }, { status: 404 });
+    }
+
     const sale = await db.collection<Sale>("sales").findOneAndUpdate(
       { saleId },
       { $set: update },
@@ -68,6 +74,34 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!sale) {
       return NextResponse.json({ message: "Sale not found." }, { status: 404 });
     }
+
+    if (update.soldItems) {
+      await Promise.all([
+        ...existingSale.soldItems.map((item) => {
+          if (!item.productCode) return Promise.resolve();
+
+          return db.collection("products").updateOne(
+            { productCode: item.productCode },
+            {
+              $inc: { quantity: item.quantity },
+              $set: { updatedAt: new Date() },
+            },
+          );
+        }),
+        ...update.soldItems.map((item) => {
+          if (!item.productCode) return Promise.resolve();
+
+          return db.collection("products").updateOne(
+            { productCode: item.productCode },
+            {
+              $inc: { quantity: -item.quantity },
+              $set: { updatedAt: new Date() },
+            },
+          );
+        }),
+      ]);
+    }
+
     return NextResponse.json({ sale });
   } catch {
     return NextResponse.json({ message: "Unable to update sale." }, { status: 500 });
@@ -87,10 +121,31 @@ export async function DELETE(_: Request, context: RouteContext) {
   try {
     const { getDb } = await import("@/lib/mongodb");
     const db = await getDb();
+    const sale = await db.collection<Sale>("sales").findOne({ saleId });
+
+    if (!sale) {
+      return NextResponse.json({ message: "Sale not found." }, { status: 404 });
+    }
+
     const result = await db.collection<Sale>("sales").deleteOne({ saleId });
     if (result.deletedCount === 0) {
       return NextResponse.json({ message: "Sale not found." }, { status: 404 });
     }
+
+    await Promise.all(
+      sale.soldItems.map((item) => {
+        if (!item.productCode) return Promise.resolve();
+
+        return db.collection("products").updateOne(
+          { productCode: item.productCode },
+          {
+            $inc: { quantity: item.quantity },
+            $set: { updatedAt: new Date() },
+          },
+        );
+      }),
+    );
+
     return NextResponse.json({ message: "Sale deleted." });
   } catch {
     return NextResponse.json({ message: "Unable to delete sale." }, { status: 500 });

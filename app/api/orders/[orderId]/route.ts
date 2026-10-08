@@ -148,8 +148,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ message: "Order not found." }, { status: 404 });
     }
 
-    const shouldAddToStock =
-      existingOrder.status !== "Arrived" && update.status === "Arrived";
+    const nextOrder = { ...existingOrder, ...update };
 
     const result = await db
       .collection<Order>("orders")
@@ -159,11 +158,21 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ message: "Order not found." }, { status: 404 });
     }
 
-    if (shouldAddToStock) {
+    if (existingOrder.status === "Arrived") {
       await db.collection<Product>("products").updateOne(
         { productCode: existingOrder.productCode },
         {
-          $inc: { quantity: existingOrder.quantity },
+          $inc: { quantity: -existingOrder.quantity },
+          $set: { updatedAt: new Date() },
+        },
+      );
+    }
+
+    if (nextOrder.status === "Arrived") {
+      await db.collection<Product>("products").updateOne(
+        { productCode: nextOrder.productCode },
+        {
+          $inc: { quantity: nextOrder.quantity },
           $set: { updatedAt: new Date() },
         },
       );
@@ -192,10 +201,26 @@ export async function DELETE(_: Request, context: RouteContext) {
 
   try {
     const db = await getDb();
+    const order = await db.collection<Order>("orders").findOne({ orderId });
+
+    if (!order) {
+      return NextResponse.json({ message: "Order not found." }, { status: 404 });
+    }
+
     const result = await db.collection<Order>("orders").deleteOne({ orderId });
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ message: "Order not found." }, { status: 404 });
+    }
+
+    if (order.status === "Arrived") {
+      await db.collection<Product>("products").updateOne(
+        { productCode: order.productCode },
+        {
+          $inc: { quantity: -order.quantity },
+          $set: { updatedAt: new Date() },
+        },
+      );
     }
 
     return NextResponse.json({ message: "Order deleted." });
