@@ -34,7 +34,7 @@ export default function PosPage() {
 
   function getAvailableStock(productCode?: string) {
     if (!productCode) return 0;
-    return products.find((product) => product.productCode === productCode)?.quantity ?? 0;
+    return Math.max(0, products.find((product) => product.productCode === productCode)?.quantity ?? 0);
   }
 
   function addProduct(event: FormEvent<HTMLFormElement>) {
@@ -53,8 +53,9 @@ export default function PosPage() {
     }
 
     const currentQuantity = cart.find((item) => item.productCode === product.productCode)?.quantity ?? 0;
-    if (product.quantity <= currentQuantity) {
-      setMessage(`${product.medicineName} has only ${product.quantity} item(s) in stock.`);
+    const availableStock = Math.max(0, product.quantity);
+    if (availableStock <= currentQuantity) {
+      setMessage(`${product.medicineName} has only ${availableStock} item(s) in stock.`);
       return;
     }
 

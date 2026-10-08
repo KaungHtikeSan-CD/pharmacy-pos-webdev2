@@ -45,10 +45,10 @@ export default function DashboardPage() {
     [sales],
   );
   const lowStockCount = products.filter(
-    (product) => product.quantity <= product.lowStockThreshold,
+    (product) => Math.max(0, product.quantity) <= product.lowStockThreshold,
   ).length;
   const lowStockProducts = products
-    .filter((product) => product.quantity <= product.lowStockThreshold)
+    .filter((product) => Math.max(0, product.quantity) <= product.lowStockThreshold)
     .sort((a, b) => a.quantity - b.quantity);
   const arrivedOrders = orders.filter((order) => order.status === "Arrived").length;
   const topProducts = useMemo(() => {
@@ -111,7 +111,7 @@ export default function DashboardPage() {
                   <tr key={product.productId}>
                     <td>{product.medicineName}</td>
                     <td>{product.productCode}</td>
-                    <td>{product.quantity}</td>
+                    <td>{Math.max(0, product.quantity)}</td>
                     <td>{product.lowStockThreshold}</td>
                     <td><span className="badge danger">Low stock</span></td>
                   </tr>

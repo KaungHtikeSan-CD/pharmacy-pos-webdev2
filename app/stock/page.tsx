@@ -280,12 +280,12 @@ export default function StockPage() {
                     <td>{product.productCode}</td>
                     <td>{product.medicineName}</td>
                     <td>{product.category}</td>
-                    <td>{product.quantity}</td>
+                    <td>{Math.max(0, product.quantity)}</td>
                     <td>{product.wholesalePrice.toLocaleString()}</td>
                     <td>{product.salePrice.toLocaleString()}</td>
                     <td>
-                      <span className={product.quantity <= product.lowStockThreshold ? "badge danger" : "badge"}>
-                        {product.quantity <= product.lowStockThreshold ? "Low stock" : "In stock"}
+                      <span className={Math.max(0, product.quantity) <= product.lowStockThreshold ? "badge danger" : "badge"}>
+                        {Math.max(0, product.quantity) <= product.lowStockThreshold ? "Low stock" : "In stock"}
                       </span>
                     </td>
                     <td>

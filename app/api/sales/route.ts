@@ -80,7 +80,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json(
         {
-          message: `${product?.medicineName ?? productCode} has only ${product?.quantity ?? 0} item(s) in stock. Requested ${quantity}.`,
+          message: `${product?.medicineName ?? productCode} has only ${Math.max(0, product?.quantity ?? 0)} item(s) in stock. Requested ${quantity}.`,
         },
         { status: 409 },
       );
