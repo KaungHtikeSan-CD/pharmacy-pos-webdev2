@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { type Db } from "mongodb";
 
 import { getDb } from "@/lib/mongodb";
 import { type Order, type OrderStatus } from "@/types/order";
@@ -42,9 +43,63 @@ function isOrderStatus(value: unknown): value is OrderStatus {
   return value === "Ordered" || value === "Arrived";
 }
 
+function calculateSalePrice(wholesalePrice: number, profitPercentage: number) {
+  return Math.round(wholesalePrice + (wholesalePrice * profitPercentage) / 100);
+}
+
 async function getOrderId(context: RouteContext) {
   const { orderId } = await context.params;
   return orderId.trim();
+}
+
+async function applyOrderStockChange(db: Db, order: Order, quantityChange: number) {
+  if (quantityChange === 0) return;
+
+  const now = new Date();
+
+  if (quantityChange > 0) {
+    const result = await db.collection<Product>("products").updateOne(
+      { productCode: order.productCode },
+      {
+        $inc: { quantity: quantityChange },
+        $set: { updatedAt: now },
+      },
+    );
+
+    if (result.matchedCount === 0) {
+      const profitPercentage = 20;
+      await db.collection<Product>("products").insertOne({
+        productId: order.productCode,
+        productCode: order.productCode,
+        barcode: order.barcode,
+        medicineName: order.medicineName,
+        category: order.category,
+        quantity: quantityChange,
+        cardsPerBox: order.cardsPerBox,
+        wholesalePrice: order.wholesalePrice,
+        profitPercentage,
+        salePrice: calculateSalePrice(order.wholesalePrice, profitPercentage),
+        wholesaleShop: order.wholesaleShop,
+        lowStockThreshold: 5,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return;
+  }
+
+  await db.collection<Product>("products").updateOne(
+    { productCode: order.productCode },
+    [
+      {
+        $set: {
+          quantity: { $max: [0, { $add: ["$quantity", quantityChange] }] },
+          updatedAt: now,
+        },
+      },
+    ],
+  );
 }
 
 export async function GET(_: Request, context: RouteContext) {
@@ -159,23 +214,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     if (existingOrder.status === "Arrived") {
-      await db.collection<Product>("products").updateOne(
-        { productCode: existingOrder.productCode },
-        {
-          $inc: { quantity: -existingOrder.quantity },
-          $set: { updatedAt: new Date() },
-        },
-      );
+      await applyOrderStockChange(db, existingOrder, -existingOrder.quantity);
     }
 
     if (nextOrder.status === "Arrived") {
-      await db.collection<Product>("products").updateOne(
-        { productCode: nextOrder.productCode },
-        {
-          $inc: { quantity: nextOrder.quantity },
-          $set: { updatedAt: new Date() },
-        },
-      );
+      await applyOrderStockChange(db, nextOrder, nextOrder.quantity);
     }
 
     const order = await db.collection<Order>("orders").findOne({ orderId });
@@ -214,13 +257,7 @@ export async function DELETE(_: Request, context: RouteContext) {
     }
 
     if (order.status === "Arrived") {
-      await db.collection<Product>("products").updateOne(
-        { productCode: order.productCode },
-        {
-          $inc: { quantity: -order.quantity },
-          $set: { updatedAt: new Date() },
-        },
-      );
+      await applyOrderStockChange(db, order, -order.quantity);
     }
 
     return NextResponse.json({ message: "Order deleted." });

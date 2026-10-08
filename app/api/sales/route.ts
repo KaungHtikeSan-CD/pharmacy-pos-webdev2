@@ -86,22 +86,60 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await db.collection<Sale>("sales").insertOne(sale);
-    await Promise.all(
-      sale.soldItems.map((item) => {
-        if (!item.productCode) return Promise.resolve();
+    const decrementedItems: { productCode: string; quantity: number }[] = [];
 
-        return db.collection("products").updateOne(
-          { productCode: item.productCode },
-          {
-            $inc: { quantity: -item.quantity },
-            $set: { updatedAt: now },
-          },
+    for (const [productCode, quantity] of requestedQuantities.entries()) {
+      const decrementResult = await db.collection<Product>("products").updateOne(
+        { productCode, quantity: { $gte: quantity } },
+        {
+          $inc: { quantity: -quantity },
+          $set: { updatedAt: now },
+        },
+      );
+
+      if (decrementResult.matchedCount === 0) {
+        await Promise.all(
+          decrementedItems.map((item) =>
+            db.collection<Product>("products").updateOne(
+              { productCode: item.productCode },
+              {
+                $inc: { quantity: item.quantity },
+                $set: { updatedAt: now },
+              },
+            ),
+          ),
         );
-      }),
-    );
 
-    return NextResponse.json({ sale: { ...sale, _id: result.insertedId } }, { status: 201 });
+        const product = productsByCode.get(productCode);
+        return NextResponse.json(
+          {
+            message: `${product?.medicineName ?? productCode} has only ${Math.max(0, product?.quantity ?? 0)} item(s) in stock. Requested ${quantity}.`,
+          },
+          { status: 409 },
+        );
+      }
+
+      decrementedItems.push({ productCode, quantity });
+    }
+
+    try {
+      const result = await db.collection<Sale>("sales").insertOne(sale);
+      return NextResponse.json({ sale: { ...sale, _id: result.insertedId } }, { status: 201 });
+    } catch (error) {
+      await Promise.all(
+        decrementedItems.map((item) =>
+          db.collection<Product>("products").updateOne(
+            { productCode: item.productCode },
+            {
+              $inc: { quantity: item.quantity },
+              $set: { updatedAt: now },
+            },
+          ),
+        ),
+      );
+
+      throw error;
+    }
   } catch {
     return NextResponse.json({ message: "Unable to create sale." }, { status: 500 });
   }
